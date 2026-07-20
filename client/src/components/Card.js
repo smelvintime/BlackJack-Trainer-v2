@@ -17,7 +17,8 @@ const Card = ({ suit, rank, isHidden, isCutCard }) => {
                 <p className="text-lg sm:text-2xl font-bold">{rank}</p>
             </div>
             <div className={`absolute inset-0 flex items-center justify-center text-[clamp(2.5rem,10vw,4rem)] sm:text-5xl md:text-6xl ${suitColor}`}>
-                {suit}
+                {/* U+FE0E forces text presentation: some platforms otherwise render ♥/♦ as emoji, ignoring the CSS color */}
+                {suit + '\uFE0E'}
             </div>
             <div className={`absolute bottom-1 right-2 text-center leading-none rotate-180 ${suitColor}`}>
                 <p className="text-lg sm:text-2xl font-bold">{rank}</p>

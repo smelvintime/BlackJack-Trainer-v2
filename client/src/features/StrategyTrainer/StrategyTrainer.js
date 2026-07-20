@@ -4,6 +4,8 @@ import HistoryTracker from '../../components/HistoryTracker.js';
 import StreakCounter from '../../components/StreakCounter.js';
 import BasicStrategyChartModal from '../../components/BasicStrategyModal.js';
 import CountPromptModal from '../../components/CountPromptModal.js';
+import HelpModal from '../../components/HelpModal.js';
+import { CheckIcon, CrossIcon, HeartbreakIcon } from '../../components/Icons.js';
 import { getBasicStrategy, getCardCountValue } from '../../utils/blackjackLogic.js';
 
 const BlackjackTrainer = ({ onGoBack }) => {
@@ -21,8 +23,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
     const [showCountPrompt, setShowCountPrompt] = useState(false);
 
     const [message, setMessage] = useState('Select a game mode to start.');
-    const [feedback, setFeedback] = useState('');
-    const [isFeedbackCorrect, setIsFeedbackCorrect] = useState(false);
+    // null, or { correct: boolean, text?: string }
+    const [feedback, setFeedback] = useState(null);
     const [history, setHistory] = useState([]);
     const [correctCount, setCorrectCount] = useState(0);
     const [incorrectCount, setIncorrectCount] = useState(0);
@@ -33,9 +35,14 @@ const BlackjackTrainer = ({ onGoBack }) => {
     const [dealerBjCount, setDealerBjCount] = useState(0);
     const [streakCount, setStreakCount] = useState(0);
     const [isActionDisabled, setIsActionDisabled] = useState(false);
+    // Synchronous lock: isActionDisabled only takes effect after a re-render, so
+    // rapid inputs (key auto-repeat, double taps) can slip through with stale state.
+    const actionLockRef = useRef(false);
+    const prevStreakRef = useRef(0);
     const lastActionFeedback = useRef('');
     const endOfRoundMessageSet = useRef(false);
     const [showChartModal, setShowChartModal] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
 
     // State for new animations
     const [announcement, setAnnouncement] = useState(null);
@@ -64,7 +71,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
         return newDeck;
     }, []);
 
-    const calculateScore = useCallback((hand) => {
+    // isSplitHand: a two-card 21 after a split is just 21, not a natural blackjack
+    const calculateScore = useCallback((hand, isSplitHand = false) => {
         let scoreWithoutAces = 0;
         let aceCount = 0;
         hand.forEach(card => {
@@ -85,7 +93,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
         const lowScore = scoreWithoutAces + aceCount;
         const highScore = lowScore + 10;
         
-        if (highScore === 21 && hand.length === 2) {
+        if (highScore === 21 && hand.length === 2 && !isSplitHand) {
             return { score: 21, isSoft: false, display: 'Blackjack' };
         }
 
@@ -109,12 +117,12 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
     // Overhauled to create a fresh shoe every hand
     const dealNewGame = useCallback(() => {
-        const newShoe = createShoe(); 
-        
+        const newShoe = createShoe();
+
+        actionLockRef.current = false;
         endOfRoundMessageSet.current = false;
         setMessage('');
-        setFeedback('');
-        setIsFeedbackCorrect(false);
+        setFeedback(null);
         setActiveHandIndex(0);
         setRunningCount(0);
 
@@ -149,37 +157,25 @@ const BlackjackTrainer = ({ onGoBack }) => {
     }, [createShoe, dealCard, calculateScore]);
 
     const executePlayerAction = useCallback((actionCode, actionName) => {
+        if (actionLockRef.current) return;
+        actionLockRef.current = true;
         setIsActionDisabled(true);
         const currentHandRef = playerHands[activeHandIndex];
         const dealerUpCard = dealerHand.cards.find(c => !c.isHidden);
-        
-        const correctMove = getBasicStrategy(currentHandRef.cards, dealerUpCard);
-        
-        const isCorrect = actionCode === correctMove;
-        
-        if (isCorrect) {
-            const newStreak = streakCount + 1;
-            setStreakCount(newStreak);
-            setCorrectCount(prev => prev + 1);
-            setIsFeedbackCorrect(true);
-            setFeedback('✅');
-            lastActionFeedback.current = "Correct!";
 
-            if ([100, 200, 300].includes(newStreak)) {
-                setAnnouncement(newStreak);
-            } else if (newStreak === 50) {
-                setBurstKey(k => k + 1);
-            }
-            setShowWashAway(false);
+        const correctMove = getBasicStrategy(currentHandRef.cards, dealerUpCard);
+
+        const isCorrect = actionCode === correctMove;
+
+        if (isCorrect) {
+            setStreakCount(prev => prev + 1);
+            setCorrectCount(prev => prev + 1);
+            setFeedback({ correct: true });
+            lastActionFeedback.current = "Correct!";
         } else {
-            if (streakCount >= 2) {
-                setShowWashAway(true);
-                setWashAwayKey(k => k + 1);
-            }
             setStreakCount(0);
             setIncorrectCount(prev => prev + 1);
-            setIsFeedbackCorrect(false);
-            setFeedback(`❌ Correct move: ${correctMove}`);
+            setFeedback({ correct: false, text: `Correct move: ${correctMove}` });
             lastActionFeedback.current = "Incorrect.";
         }
         
@@ -244,8 +240,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
                     if (isAces) {
                         const hand1 = { cards: [handToSplit[0], card1], status: 'stood' };
                         const hand2 = { cards: [handToSplit[1], card2], status: 'stood' };
-                        Object.assign(hand1, calculateScore(hand1.cards));
-                        Object.assign(hand2, calculateScore(hand2.cards));
+                        Object.assign(hand1, calculateScore(hand1.cards, true));
+                        Object.assign(hand2, calculateScore(hand2.cards, true));
                         setPlayerHands([hand1, hand2]);
                     } else {
                         const newHands = JSON.parse(JSON.stringify(playerHands));
@@ -260,11 +256,30 @@ const BlackjackTrainer = ({ onGoBack }) => {
             }
             default: break;
         }
-    }, [activeHandIndex, calculateScore, dealCard, dealerHand.cards, playerHands, streakCount, deck]);
+    }, [activeHandIndex, calculateScore, dealCard, dealerHand.cards, playerHands, deck]);
 
     const handlePlayerAction = useCallback((actionCode, actionName) => {
         executePlayerAction(actionCode, actionName);
     }, [executePlayerAction]);
+
+    // Milestone and streak-lost effects react to the committed streak value, so they
+    // can't fire on a stale count the way the old inline checks could.
+    useEffect(() => {
+        const prev = prevStreakRef.current;
+        prevStreakRef.current = streakCount;
+
+        if (streakCount > prev) {
+            if ([100, 200, 300].includes(streakCount)) {
+                setAnnouncement(streakCount);
+            } else if (streakCount === 50) {
+                setBurstKey(k => k + 1);
+            }
+            setShowWashAway(false);
+        } else if (streakCount === 0 && prev >= 2) {
+            setShowWashAway(true);
+            setWashAwayKey(k => k + 1);
+        }
+    }, [streakCount]);
 
     const canSplit = useMemo(() => {
         if (!playerHands[activeHandIndex]) return false;
@@ -290,7 +305,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
                         const newHands = JSON.parse(JSON.stringify(prevHands));
                         const currentHand = newHands[activeHandIndex];
                         currentHand.cards.push(card);
-                        Object.assign(currentHand, calculateScore(currentHand.cards));
+                        // one-card hands only exist mid-split, so this is always a split hand
+                        Object.assign(currentHand, calculateScore(currentHand.cards, true));
                         if (currentHand.score === 21) {
                             currentHand.status = 'stood';
                         }
@@ -303,6 +319,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
     useEffect(() => {
         if (gameState !== 'player-turn') {
+            actionLockRef.current = false;
             setIsActionDisabled(false);
             return;
         }
@@ -341,7 +358,10 @@ const BlackjackTrainer = ({ onGoBack }) => {
                 }
             }
         }
-        setTimeout(() => setIsActionDisabled(false), 500);
+        setTimeout(() => {
+            actionLockRef.current = false;
+            setIsActionDisabled(false);
+        }, 500);
 
     }, [playerHands, gameState, activeHandIndex]);
 
@@ -406,15 +426,17 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
             if (playerHasBj && !dealerHasBj) {
                 resultMessage = 'Blackjack! You win.';
-                setWinCount(prev => prev + 1);
+                handWins++;
                 setPlayerBjCount(prev => prev + 1);
             } else if (dealerHasBj && !playerHasBj) {
                 resultMessage = 'Dealer has Blackjack. You lose.';
-                setLossCount(prev => prev + 1);
+                handLosses++;
                 setDealerBjCount(prev => prev + 1);
             } else if (dealerHasBj && playerHasBj) {
                 resultMessage = 'Push (Both have Blackjack).';
                 pushes++;
+                setPlayerBjCount(prev => prev + 1);
+                setDealerBjCount(prev => prev + 1);
             } else {
                 playerHands.forEach((hand, index) => {
                     if (!hand) return;
@@ -437,11 +459,11 @@ const BlackjackTrainer = ({ onGoBack }) => {
                         pushes++;
                     }
                 });
-
-                setWinCount(prev => prev + handWins);
-                setLossCount(prev => prev + handLosses);
-                setPushCount(prev => prev + pushes);
             }
+
+            setWinCount(prev => prev + handWins);
+            setLossCount(prev => prev + handLosses);
+            setPushCount(prev => prev + pushes);
             
             setDealerHand(prev => ({...prev, cards: revealedDealerHand, ...dealerScoreInfo}));
             const finalMessage = `${lastActionFeedback.current} ${resultMessage}`;
@@ -452,14 +474,14 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
     useEffect(() => {
         if (feedback) {
-            const timer = setTimeout(() => { setFeedback(''); }, 1500);
+            const timer = setTimeout(() => { setFeedback(null); }, 1500);
             return () => clearTimeout(timer);
         }
     }, [feedback]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
-            if (isActionDisabled || showCountPrompt) return;
+            if (event.repeat || isActionDisabled || showCountPrompt) return;
 
             if (gameState === 'player-turn') {
                 if (event.key.toLowerCase() === 'a') handlePlayerAction('H', 'Hit');
@@ -547,15 +569,26 @@ const BlackjackTrainer = ({ onGoBack }) => {
                                 </button>
                                 <h1 className="text-3xl font-bold transition-colors duration-300">Strategy Trainer</h1>
                             </div>
-                            <button
-                                onClick={() => setShowChartModal(true)}
-                                className="bg-gray-700 text-white rounded-lg p-2 shadow-md hover:bg-gray-600 transition-colors flex items-center justify-center"
-                                title="View Basic Strategy Chart"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setShowHelpModal(true)}
+                                    className="bg-gray-700 text-white rounded-lg p-2 shadow-md hover:bg-gray-600 transition-colors flex items-center justify-center"
+                                    title="Help: How the trainer works"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setShowChartModal(true)}
+                                    className="bg-gray-700 text-white rounded-lg p-2 shadow-md hover:bg-gray-600 transition-colors flex items-center justify-center"
+                                    title="View Basic Strategy Chart"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </header>
 
                         <div className="bg-gray-900 border-4 border-gray-800 rounded-3xl shadow-xl p-2 md:p-6 text-white flex flex-col justify-between flex-grow min-h-[60vh]">
@@ -568,8 +601,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
                             <div className="text-center my-0 h-10 flex items-center justify-center">
                                 {feedback && gameState !== 'pre-deal' && gameState !== 'pre-game' && (
-                                    <p className={`text-2xl font-bold animate-fade-in ${isFeedbackCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                                        {feedback}
+                                    <p className={`text-2xl font-bold animate-fade-in ${feedback.correct ? 'text-green-400' : 'text-red-400'}`}>
+                                        {feedback.correct ? <CheckIcon /> : <><CrossIcon /> {feedback.text}</>}
                                     </p>
                                 )}
                             </div>
@@ -646,7 +679,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
                         <div className="md:hidden h-4"></div>
                         {showWashAway ? (
                             <div key={washAwayKey} className="mt-4 bg-gray-800 bg-opacity-80 backdrop-blur-sm p-4 rounded-xl shadow-2xl flex items-center justify-center gap-2 animate-wash-away">
-                                <span className="text-2xl">💔🥀</span><span className="text-xl font-bold text-gray-400">Streak Lost</span>
+                                <HeartbreakIcon className="text-2xl" /><span className="text-xl font-bold text-gray-400">Streak Lost</span>
                             </div>
                         ) : (
                            <StreakCounter streak={streakCount} burstAnimClass={burstAnimClass} />
@@ -654,6 +687,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
                     </div>
                 </div>
                 {showCountPrompt && <CountPromptModal onConfirm={() => {}} />}
+                {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
                 {showChartModal && (
                     <BasicStrategyChartModal 
                         playerHand={activePlayerHand} 

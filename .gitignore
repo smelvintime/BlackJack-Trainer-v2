@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Production build
+client/build/
+
+# Misc
+.DS_Store
+npm-debug.log*
