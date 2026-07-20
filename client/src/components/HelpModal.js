@@ -71,7 +71,7 @@ const HelpModal = ({ onClose }) => {
                         </ul>
                     </section>
 
-                    <section>
+                    <section className="touch-hide">
                         <h3 className="text-lg font-semibold mb-1 text-yellow-300">Keyboard Shortcuts</h3>
                         <ul className="space-y-1 font-mono">
                             <li><span className="bg-gray-700 px-2 py-0.5 rounded">A</span> Hit</li>

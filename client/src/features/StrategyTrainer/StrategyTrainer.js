@@ -563,11 +563,11 @@ const BlackjackTrainer = ({ onGoBack }) => {
                 <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-4">
                     <div className="flex-grow">
                         <header className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 sm:gap-6">
                                 <button onClick={onGoBack} className="px-3 py-1.5 text-sm bg-blue-500 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-600 transition">
                                     Back
                                 </button>
-                                <h1 className="text-3xl font-bold transition-colors duration-300">Strategy Trainer</h1>
+                                <h1 className="text-xl sm:text-3xl font-bold whitespace-nowrap transition-colors duration-300">Strategy Trainer</h1>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button

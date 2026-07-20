@@ -19,9 +19,16 @@ PORT=3111 node server.js            # serves client/build
   (`client/tailwind.config.js` + `@tailwind` directives in `client/src/index.css`) —
   no CDN and no style-injection workaround needed.
 - Drive with Playwright + system Chromium (`executablePath: '/opt/pw-browsers/chromium'`).
-- Symbols (check/cross/flame/heartbreak) are inline SVGs from
-  `src/components/Icons.js`, not emoji text — select scoreboard counters via
-  their `title` attributes (e.g. `span[title="Correct decisions"]`).
+- Symbols (check/cross/flame/heartbreak) and card suit pips are inline SVGs
+  from `src/components/Icons.js`, not emoji/Unicode text — select scoreboard
+  counters via their `title` attributes (e.g. `span[title="Correct decisions"]`),
+  and card suits via `svg[aria-label]` inside the `.inset-0` div.
+- A hand-written service worker (`public/service-worker.js`, registered in
+  `src/index.js`) is network-first for HTML / cache-first for hashed assets.
+  It has no `clients.claim()`, so the FIRST visit does not control the page or
+  reload — offline works from the second load on. Bump `CACHE_VERSION` to evict
+  the offline cache. SWs need `http://localhost` (secure-context exempt) and a
+  normal Playwright context; assert via `navigator.serviceWorker` + `caches.keys()`.
 
 ## Flows worth driving
 
