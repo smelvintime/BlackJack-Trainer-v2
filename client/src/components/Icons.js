@@ -11,8 +11,7 @@ const iconStyle = { display: 'inline-block', verticalAlign: '-0.125em' };
 
 export const CheckIcon = ({ className = '' }) => (
     <svg className={className} style={iconStyle} width="1em" height="1em" viewBox="0 0 24 24" role="img" aria-label="Correct">
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="#22c55e" />
-        <path d="M6.8 12.6l3.6 3.6 6.8-8.4" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4.5 13l5.2 5.2L19.5 6" fill="none" stroke="#22c55e" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 
