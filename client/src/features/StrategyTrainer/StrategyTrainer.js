@@ -5,6 +5,7 @@ import StreakCounter from '../../components/StreakCounter.js';
 import BasicStrategyChartModal from '../../components/BasicStrategyModal.js';
 import CountPromptModal from '../../components/CountPromptModal.js';
 import HelpModal from '../../components/HelpModal.js';
+import { CheckIcon, CrossIcon, HeartbreakIcon } from '../../components/Icons.js';
 import { getBasicStrategy, getCardCountValue } from '../../utils/blackjackLogic.js';
 
 const BlackjackTrainer = ({ onGoBack }) => {
@@ -22,8 +23,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
     const [showCountPrompt, setShowCountPrompt] = useState(false);
 
     const [message, setMessage] = useState('Select a game mode to start.');
-    const [feedback, setFeedback] = useState('');
-    const [isFeedbackCorrect, setIsFeedbackCorrect] = useState(false);
+    // null, or { correct: boolean, text?: string }
+    const [feedback, setFeedback] = useState(null);
     const [history, setHistory] = useState([]);
     const [correctCount, setCorrectCount] = useState(0);
     const [incorrectCount, setIncorrectCount] = useState(0);
@@ -70,7 +71,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
         return newDeck;
     }, []);
 
-    const calculateScore = useCallback((hand) => {
+    // isSplitHand: a two-card 21 after a split is just 21, not a natural blackjack
+    const calculateScore = useCallback((hand, isSplitHand = false) => {
         let scoreWithoutAces = 0;
         let aceCount = 0;
         hand.forEach(card => {
@@ -91,7 +93,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
         const lowScore = scoreWithoutAces + aceCount;
         const highScore = lowScore + 10;
         
-        if (highScore === 21 && hand.length === 2) {
+        if (highScore === 21 && hand.length === 2 && !isSplitHand) {
             return { score: 21, isSoft: false, display: 'Blackjack' };
         }
 
@@ -120,8 +122,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
         actionLockRef.current = false;
         endOfRoundMessageSet.current = false;
         setMessage('');
-        setFeedback('');
-        setIsFeedbackCorrect(false);
+        setFeedback(null);
         setActiveHandIndex(0);
         setRunningCount(0);
 
@@ -169,14 +170,12 @@ const BlackjackTrainer = ({ onGoBack }) => {
         if (isCorrect) {
             setStreakCount(prev => prev + 1);
             setCorrectCount(prev => prev + 1);
-            setIsFeedbackCorrect(true);
-            setFeedback('✅');
+            setFeedback({ correct: true });
             lastActionFeedback.current = "Correct!";
         } else {
             setStreakCount(0);
             setIncorrectCount(prev => prev + 1);
-            setIsFeedbackCorrect(false);
-            setFeedback(`❌ Correct move: ${correctMove}`);
+            setFeedback({ correct: false, text: `Correct move: ${correctMove}` });
             lastActionFeedback.current = "Incorrect.";
         }
         
@@ -241,8 +240,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
                     if (isAces) {
                         const hand1 = { cards: [handToSplit[0], card1], status: 'stood' };
                         const hand2 = { cards: [handToSplit[1], card2], status: 'stood' };
-                        Object.assign(hand1, calculateScore(hand1.cards));
-                        Object.assign(hand2, calculateScore(hand2.cards));
+                        Object.assign(hand1, calculateScore(hand1.cards, true));
+                        Object.assign(hand2, calculateScore(hand2.cards, true));
                         setPlayerHands([hand1, hand2]);
                     } else {
                         const newHands = JSON.parse(JSON.stringify(playerHands));
@@ -306,7 +305,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
                         const newHands = JSON.parse(JSON.stringify(prevHands));
                         const currentHand = newHands[activeHandIndex];
                         currentHand.cards.push(card);
-                        Object.assign(currentHand, calculateScore(currentHand.cards));
+                        // one-card hands only exist mid-split, so this is always a split hand
+                        Object.assign(currentHand, calculateScore(currentHand.cards, true));
                         if (currentHand.score === 21) {
                             currentHand.status = 'stood';
                         }
@@ -474,7 +474,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
     useEffect(() => {
         if (feedback) {
-            const timer = setTimeout(() => { setFeedback(''); }, 1500);
+            const timer = setTimeout(() => { setFeedback(null); }, 1500);
             return () => clearTimeout(timer);
         }
     }, [feedback]);
@@ -601,8 +601,8 @@ const BlackjackTrainer = ({ onGoBack }) => {
 
                             <div className="text-center my-0 h-10 flex items-center justify-center">
                                 {feedback && gameState !== 'pre-deal' && gameState !== 'pre-game' && (
-                                    <p className={`text-2xl font-bold animate-fade-in ${isFeedbackCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                                        {feedback}
+                                    <p className={`text-2xl font-bold animate-fade-in ${feedback.correct ? 'text-green-400' : 'text-red-400'}`}>
+                                        {feedback.correct ? <CheckIcon /> : <><CrossIcon /> {feedback.text}</>}
                                     </p>
                                 )}
                             </div>
@@ -679,7 +679,7 @@ const BlackjackTrainer = ({ onGoBack }) => {
                         <div className="md:hidden h-4"></div>
                         {showWashAway ? (
                             <div key={washAwayKey} className="mt-4 bg-gray-800 bg-opacity-80 backdrop-blur-sm p-4 rounded-xl shadow-2xl flex items-center justify-center gap-2 animate-wash-away">
-                                <span className="text-2xl">💔🥀</span><span className="text-xl font-bold text-gray-400">Streak Lost</span>
+                                <HeartbreakIcon className="text-2xl" /><span className="text-xl font-bold text-gray-400">Streak Lost</span>
                             </div>
                         ) : (
                            <StreakCounter streak={streakCount} burstAnimClass={burstAnimClass} />

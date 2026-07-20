@@ -2,27 +2,28 @@
 // --- FILE: src/components/HistoryTracker.js ---
 // ===================================================================================
 import React from 'react';
+import { CheckIcon, CrossIcon } from './Icons.js';
 
 const HistoryTracker = ({ history, correctCount, incorrectCount, winCount, lossCount, pushCount, playerBjCount, dealerBjCount }) => {
     const opacities = ['opacity-100', 'opacity-75', 'opacity-60', 'opacity-40', 'opacity-25'];
-    
+
     return (
         <div className="w-full md:w-72 bg-gray-800 bg-opacity-80 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl z-20 group">
             <div className="flex justify-between items-start border-b border-gray-600 pb-2 mb-2">
                 <h3 className="text-lg font-bold">History</h3>
                 <div className="flex flex-col items-end text-sm space-y-1">
                     <div className="flex gap-3">
-                        <span className="text-blue-400">W: {winCount}</span>
-                        <span className="text-orange-400">L: {lossCount}</span>
-                        <span className="text-gray-400">P: {pushCount}</span>
+                        <span className="text-blue-400" title="Hands won">W: {winCount}</span>
+                        <span className="text-orange-400" title="Hands lost">L: {lossCount}</span>
+                        <span className="text-gray-400" title="Pushes (ties)">P: {pushCount}</span>
                     </div>
                     <div className="flex gap-3">
-                        <span className="text-green-400">✅ {correctCount}</span>
-                        <span className="text-red-400">❌ {incorrectCount}</span>
+                        <span className="text-green-400" title="Correct decisions"><CheckIcon /> {correctCount}</span>
+                        <span className="text-red-400" title="Incorrect decisions"><CrossIcon /> {incorrectCount}</span>
                     </div>
                     <div className="flex gap-3">
-                        <span className="text-yellow-400">P-BJ: {playerBjCount}</span>
-                        <span className="text-purple-400">D-BJ: {dealerBjCount}</span>
+                        <span className="text-yellow-400" title="Player blackjacks">P-BJ: {playerBjCount}</span>
+                        <span className="text-purple-400" title="Dealer blackjacks">D-BJ: {dealerBjCount}</span>
                     </div>
                 </div>
             </div>
@@ -33,7 +34,7 @@ const HistoryTracker = ({ history, correctCount, incorrectCount, winCount, lossC
                             <span className="font-bold text-yellow-300">{item.text}</span>
                         ) : (
                             <>
-                                <span className={item.correct ? 'text-green-400' : 'text-red-400'}>{item.correct ? '✅' : '❌'}</span> {item.text}
+                                {item.correct ? <CheckIcon /> : <CrossIcon />} {item.text}
                             </>
                         )}
                     </li>

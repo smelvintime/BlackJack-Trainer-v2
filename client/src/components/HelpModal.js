@@ -2,6 +2,7 @@
 // --- FILE: src/components/HelpModal.js ---
 // ===================================================================================
 import React from 'react';
+import { CheckIcon, CrossIcon, FlameIcon } from './Icons.js';
 
 const HelpModal = ({ onClose }) => {
     return (
@@ -23,8 +24,8 @@ const HelpModal = ({ onClose }) => {
                         <p>
                             This trainer deals you real blackjack hands and grades every decision you make
                             (Hit, Stand, Double, Split) against the basic strategy chart. You get instant
-                            feedback: <span className="text-green-400">✅</span> means your move matched the
-                            chart, <span className="text-red-400">❌</span> means it didn't &mdash; and the
+                            feedback: <CheckIcon /> means your move matched the
+                            chart, <CrossIcon /> means it didn't &mdash; and the
                             correct move is shown so you can learn from it.
                         </p>
                     </section>
@@ -33,7 +34,7 @@ const HelpModal = ({ onClose }) => {
                         <h3 className="text-lg font-semibold mb-1 text-yellow-300">The Scoreboard</h3>
                         <ul className="space-y-2">
                             <li>
-                                <span className="text-green-400 font-bold">✅</span> / <span className="text-red-400 font-bold">❌</span> &mdash;
+                                <CheckIcon /> / <CrossIcon /> &mdash;
                                 Correct and incorrect <em>decisions</em>. This is the number that matters:
                                 it tracks how well you know basic strategy.
                             </li>
@@ -51,7 +52,7 @@ const HelpModal = ({ onClose }) => {
                     </section>
 
                     <section>
-                        <h3 className="text-lg font-semibold mb-1 text-yellow-300">The Streak 🔥</h3>
+                        <h3 className="text-lg font-semibold mb-1 text-yellow-300">The Streak <FlameIcon /></h3>
                         <p>
                             The streak counts <em>consecutive correct decisions</em> &mdash; winning or losing
                             the hand doesn't affect it. It appears once you reach 2 in a row, glows brighter

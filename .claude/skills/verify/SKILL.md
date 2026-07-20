@@ -15,13 +15,13 @@ PORT=3111 node server.js            # serves client/build
 
 ## Gotchas
 
-- Tailwind is loaded at runtime from `https://cdn.tailwindcss.com` in
-  `client/public/index.html` — sandboxed browsers with no CDN access render
-  unstyled (functionality unaffected; class attributes still present).
-  Workaround for styled screenshots: `npm i tailwindcss@3` then
-  `npx tailwindcss -o tw.css --content "client/src/**/*.js"` and inject via
-  Playwright `page.addStyleTag({ path: 'tw.css' })` after `goto`.
+- Tailwind v3 is compiled into the bundle via CRA's PostCSS integration
+  (`client/tailwind.config.js` + `@tailwind` directives in `client/src/index.css`) —
+  no CDN and no style-injection workaround needed.
 - Drive with Playwright + system Chromium (`executablePath: '/opt/pw-browsers/chromium'`).
+- Symbols (check/cross/flame/heartbreak) are inline SVGs from
+  `src/components/Icons.js`, not emoji text — select scoreboard counters via
+  their `title` attributes (e.g. `span[title="Correct decisions"]`).
 
 ## Flows worth driving
 

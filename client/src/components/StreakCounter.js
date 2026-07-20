@@ -2,6 +2,7 @@
 // --- FILE: src/components/StreakCounter.js ---
 // ===================================================================================
 import React from 'react';
+import { FlameIcon } from './Icons.js';
 
 const StreakCounter = ({ streak, burstAnimClass }) => {
     if (streak < 2) return null;
@@ -22,7 +23,7 @@ const StreakCounter = ({ streak, burstAnimClass }) => {
 
     return (
         <div className={`streak-box mt-4 bg-gray-800 bg-opacity-80 backdrop-blur-sm p-4 rounded-xl shadow-2xl flex items-center justify-center gap-2 text-white ${getStreakClass()} ${burstAnimClass}`}>
-            <span className={`text-2xl ${isCosmic ? 'cosmic-text' : ''}`}>🔥</span>
+            <span className={`text-2xl ${isCosmic ? 'cosmic-text' : ''}`}><FlameIcon /></span>
             <span className={`text-xl font-bold ${isCosmic ? 'cosmic-text' : ''}`}>{streak} Streak!</span>
         </div>
     );
